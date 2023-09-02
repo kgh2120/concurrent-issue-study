@@ -4,19 +4,19 @@ import com.example.concurrentissue.domain.Stock;
 import com.example.concurrentissue.repository.StockRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
+//@Transactional(readOnly = true)
 @Service
 public class StockService {
 
     private final StockRepository stockRepository;
 
 
-
-    @Transactional
-    public void decrease(Long id, Long quantity) {
+//    @Transactional(isolation = Isolation.SERIALIZABLE)
+    public synchronized void decrease(Long id, Long quantity) {
         // Stock 조회
         // 재고 감소
         // 갱신된 값 저장
