@@ -4,11 +4,13 @@ import com.example.concurrentissue.domain.Stock;
 import com.example.concurrentissue.repository.StockRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 
 @RequiredArgsConstructor
 //@Transactional(readOnly = true)
 @Service
-public class StockServiceWithSynchronized {
+public class StockService {
 
     private final StockRepository stockRepository;
 
@@ -18,6 +20,7 @@ public class StockServiceWithSynchronized {
         하지만 서버가 여러 대라면, synchronized키워드는 동시성 문제를 보장할 수 없다.
      */
 //    @Transactional(isolation = Isolation.SERIALIZABLE)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
     public synchronized void decrease(Long id, Long quantity) {
         // Stock 조회
         // 재고 감소

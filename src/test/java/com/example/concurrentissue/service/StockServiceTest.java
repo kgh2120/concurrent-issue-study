@@ -17,7 +17,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 class StockServiceTest {
 
     @Autowired
-    private StockServiceWithSynchronized stockServiceWithSynchronized;
+    private StockService stockService;
 
     @Autowired
     private PessimisticLockStockService pessimisticLockStockService;
@@ -39,7 +39,7 @@ class StockServiceTest {
     @Test
     void 재고감소 () throws Exception{
         //given
-        stockServiceWithSynchronized.decrease(1L,1L);
+        stockService.decrease(1L,1L);
         //when
         Stock finded = stockRepository.findById(1L)
                 .orElseThrow();
@@ -60,7 +60,7 @@ class StockServiceTest {
         for (int i = 0; i < threadCount; i++) {
             executorService.submit(() -> {
                 try{
-                    stockServiceWithSynchronized.decrease(1L,1L);
+                    stockService.decrease(1L,1L);
                 }finally {
                     latch.countDown();
                 }

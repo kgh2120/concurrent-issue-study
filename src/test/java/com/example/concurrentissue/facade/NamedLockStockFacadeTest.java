@@ -14,10 +14,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class OptimisticLockStockFacadeTest {
+class NamedLockStockFacadeTest {
 
     @Autowired
-    private OptimisticLockStockFacade optimisticLockStockFacade;
+    private NamedLockStockFacade namedLockStockFacade;
 
     @Autowired
     private StockRepository stockRepository;
@@ -34,7 +34,7 @@ class OptimisticLockStockFacadeTest {
 
 
     @Test
-    void 동시에_100개의_요청_낙관락 () throws Exception{
+    void 동시에_100개의_요청_NamedLock() throws Exception{
         //given
         int threadCount = 100;
         // ExecutorService는 비동기로 처리하는 작업을 반복문으로 해준다고하네..?
@@ -43,10 +43,8 @@ class OptimisticLockStockFacadeTest {
         for (int i = 0; i < threadCount; i++) {
             executorService.submit(() -> {
                 try{
-                    optimisticLockStockFacade.decrease(1L,1L);
-                } catch (InterruptedException e) {
-                    throw new RuntimeException(e);
-                } finally {
+                    namedLockStockFacade.decrease(1L,1L);
+                }  finally {
                     latch.countDown();
                 }
             });
@@ -62,3 +60,4 @@ class OptimisticLockStockFacadeTest {
     }
 
 }
+

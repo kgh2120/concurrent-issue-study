@@ -1,10 +1,10 @@
 package com.example.concurrentissue.transaction;
 
-import com.example.concurrentissue.service.StockServiceWithSynchronized;
+import com.example.concurrentissue.service.StockService;
 
 public class TransactionStockService {
 
-    private StockServiceWithSynchronized stockServiceWithSynchronized;
+    private StockService stockService;
 
     /*
         Transactional을 걸면 이런 형태의 서비스가 생성된다고 한다.
@@ -15,7 +15,7 @@ public class TransactionStockService {
     public void decrease(Long id, Long quantity){
         startTransaction();
 
-        stockServiceWithSynchronized.decrease(id, quantity);
+        stockService.decrease(id, quantity);
 
         endTransaction();
 
