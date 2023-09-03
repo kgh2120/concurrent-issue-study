@@ -21,6 +21,8 @@ class StockServiceTest {
 
     @Autowired
     private PessimisticLockStockService pessimisticLockStockService;
+    @Autowired
+    private OptimisticLockStockService optimisticLockStockService;
 
     @Autowired
     private StockRepository stockRepository;

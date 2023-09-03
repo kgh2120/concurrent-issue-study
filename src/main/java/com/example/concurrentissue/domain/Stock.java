@@ -4,6 +4,7 @@ import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.Version;
 import lombok.NoArgsConstructor;
 
 @NoArgsConstructor
@@ -17,6 +18,8 @@ public class Stock {
 
     private Long quantity;
 
+    @Version // javax.persistance 로 이용
+    private Long version;
     public Stock(Long productId, Long quantity) {
         this.productId = productId;
         this.quantity = quantity;
