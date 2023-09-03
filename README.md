@@ -70,3 +70,24 @@
 
 ### 문제점
 `synchronized` 키워드는 프로세스내에서 동시성 문제를 보장해주지만, 서버가 여러 대라면 동시성을 보장할 수 없다.
+
+
+## 방법 3 - pessimistic lock(비관적 락) 사용
+
+자바의 동시성 해결 방법으로는 멀티 프로세스 환경에서는 적용되지 않는다는 것을 알았다. 그래서 DB차원에 LOCK을 걸어서 이를 해결하려고 한다.
+첫번째로 사용한 것은 JPA의 비관적 락(pessimistic lock)이다.
+
+JPA에서 비관적 락을 이용하는 방법은 `@Lock` 어노테이션을 추가하는 것이다.
+`@Lock`은 많은 옵션들이 있는데, 비관적 락의 경우는 3가지인 `PESSIMISTIC_READ`, `PESSIMISTIC_WRITE`, `PESSIMISTIC_FORCE_INCREMENT`가 있다.
+여기서 `PESSIMISTIC_READ`, `PESSIMISTIC_WRITE` 는 DB의 `Shared Lock`, `Exclusive Lock`과 동일하다.
+
+방법 3에서는 값에 대한 업데이트가 지속적으로 발생하기 때문에, `PESSIMISTIC_WRITE`를 이용했고 테스트에 통과할 수 있었다.
+
+```java
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("select s from Stock s where s.id = :id")
+    Stock findByIdWithPessimisticLock(Long id);
+```
+
+비관적 락의 경우는 충돌이 빈번하게 발생하는 경우, 낙관적 락보다 성능이 좋을 수 있고, 업데이트를 제어하기 때문에 데이터 정합성이 보장된다는 장점이 있다.
+하지만 별도의 DB LOCK을 이용하기 때문에 성능의 감소가 발생할 수 있다. (LOCK 유지, 동시성 감소)

@@ -1,14 +1,12 @@
 package com.example.concurrentissue.service;
 
 import static org.assertj.core.api.Assertions.*;
-import static org.junit.jupiter.api.Assertions.*;
 
 import com.example.concurrentissue.domain.Stock;
 import com.example.concurrentissue.repository.StockRepository;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -19,7 +17,11 @@ import org.springframework.boot.test.context.SpringBootTest;
 class StockServiceTest {
 
     @Autowired
-    private StockService stockService;
+    private StockServiceWithSynchronized stockServiceWithSynchronized;
+
+    @Autowired
+    private PessimisticLockStockService pessimisticLockStockService;
+
     @Autowired
     private StockRepository stockRepository;
 
@@ -35,7 +37,7 @@ class StockServiceTest {
     @Test
     void 재고감소 () throws Exception{
         //given
-        stockService.decrease(1L,1L);
+        stockServiceWithSynchronized.decrease(1L,1L);
         //when
         Stock finded = stockRepository.findById(1L)
                 .orElseThrow();
@@ -56,7 +58,7 @@ class StockServiceTest {
         for (int i = 0; i < threadCount; i++) {
             executorService.submit(() -> {
                 try{
-                    stockService.decrease(1L,1L);
+                    stockServiceWithSynchronized.decrease(1L,1L);
                 }finally {
                     latch.countDown();
                 }
@@ -70,7 +72,32 @@ class StockServiceTest {
         // 100 - 1 (1*100) = 0
 
         assertThat(stock.getQuantity()).isEqualTo(0);
+    }
 
+    @Test
+    void 동시에_100개의_요청_PessimisticLock () throws Exception{
+        //given
+        int threadCount = 100;
+        // ExecutorService는 비동기로 처리하는 작업을 반복문으로 해준다고하네..?
+        ExecutorService executorService = Executors.newFixedThreadPool(32);
+        CountDownLatch latch = new CountDownLatch(threadCount);
+        for (int i = 0; i < threadCount; i++) {
+            executorService.submit(() -> {
+                try{
+                    pessimisticLockStockService.decrease(1L,1L);
+                }finally {
+                    latch.countDown();
+                }
+            });
+        }
+        //when
+        latch.await(); // 다른 쓰레드에서 실행되는 작업이 완료될 떄 까지 기다려주는 클래스.
+        //then
+
+        Stock stock = stockRepository.findById(1L).orElseThrow();
+        // 100 - 1 (1*100) = 0
+
+        assertThat(stock.getQuantity()).isEqualTo(0);
     }
 
 

@@ -8,7 +8,7 @@ import org.springframework.stereotype.Service;
 @RequiredArgsConstructor
 //@Transactional(readOnly = true)
 @Service
-public class StockService {
+public class StockServiceWithSynchronized {
 
     private final StockRepository stockRepository;
 
@@ -25,9 +25,7 @@ public class StockService {
         Stock stock = stockRepository.findById(id)
                 .orElseThrow();
         stock.decrease(quantity);
-
         stockRepository.saveAndFlush(stock);
-
     }
 
 
