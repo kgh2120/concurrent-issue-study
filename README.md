@@ -1,46 +1,45 @@
 # 인프런 - 재고시스템으로 알아보는 동시성이슈 해결방법 강의 학습 코드
 
-
 ## 상황
 
 거래가 되어서 재고가 감소하는 상황이다. 당신은 재고의 양을 정확히 추적하면 된다.
-
 
 ## 방법1 - 일반적인 코드 작성
 
 ```java
     @Transactional
-    public void decrease(Long id, Long quantity) {
+public void decrease(Long id,Long quantity){
         // Stock 조회
         // 재고 감소
         // 갱신된 값 저장
-        Stock stock = stockRepository.findById(id)
-                .orElseThrow();
+        Stock stock=stockRepository.findById(id)
+        .orElseThrow();
         stock.decrease(quantity);
         stockRepository.saveAndFlush(stock);
-    }
+        }
 ```
 
 ### 결과 : Fail
 
-### 이유 : 
+### 이유 :
+
 멀티 쓰레드 환경에서 동시성 문제를 처리해주지 않았다.
 
-
 ## 방법 2 - synchronized 키워드 사용
+
 자바에서 동시성 문제를 해결해주는 `synchronized` 키워드를 추가했다.
 
 ```java
     @Transactional
-    public synchronized void decrease(Long id, Long quantity) {
+public synchronized void decrease(Long id,Long quantity){
         // Stock 조회
         // 재고 감소
         // 갱신된 값 저장
-        Stock stock = stockRepository.findById(id)
-                .orElseThrow();
+        Stock stock=stockRepository.findById(id)
+        .orElseThrow();
         stock.decrease(quantity);
         stockRepository.saveAndFlush(stock);
-    }
+        }
 ```
 
 ### 결과 FAIL
@@ -49,6 +48,7 @@
 
 `@Transactionl` 이 걸려있으면 서비스 클래스의 형태가 변경된다. 아래 코드와 같이 변경되기 때문에,
 `synchronized`로는 동시성을 보장할 수 없다.
+
 ```java
     /*
         Transactional을 걸면 이런 형태의 서비스가 생성된다고 한다.
@@ -56,21 +56,21 @@
         트랜잭션이 끝날 때(commit) db에 반영이 되는데 decrease에서만 synchronized를 건다고
         문제가 해결되지 않음.
      */
-    public void decrease(Long id, Long quantity){
+public void decrease(Long id,Long quantity){
         startTransaction();
 
-        stockServiceWithSynchronized.decrease(id, quantity);
+        stockServiceWithSynchronized.decrease(id,quantity);
 
         endTransaction();
 
-    }
+        }
 ```
 
 그렇기 때문에 `@Transactional`을 지우면 정상적으로 해결이 가능하다. 하지만...
 
 ### 문제점
-`synchronized` 키워드는 프로세스내에서 동시성 문제를 보장해주지만, 서버가 여러 대라면 동시성을 보장할 수 없다.
 
+`synchronized` 키워드는 프로세스내에서 동시성 문제를 보장해주지만, 서버가 여러 대라면 동시성을 보장할 수 없다.
 
 ## 방법 3 - pessimistic lock(비관적 락) 사용
 
@@ -85,7 +85,7 @@ JPA에서 비관적 락을 이용하는 방법은 `@Lock` 어노테이션을 추
 
 ```java
     @Lock(LockModeType.PESSIMISTIC_WRITE)
-    @Query("select s from Stock s where s.id = :id")
+@Query("select s from Stock s where s.id = :id")
     Stock findByIdWithPessimisticLock(Long id);
 ```
 
@@ -104,37 +104,40 @@ JPA에서 비관적 락을 이용하는 방법은 `@Lock` 어노테이션을 추
 
 ```java
     @Version // javax.persistance 로 이용
-    private Long version;
+private Long version;
 ```
 
 2. repository에 LockMode가 Optimistic인 쿼리를 작성합니다.
+
 ```java
     @Lock(LockModeType.OPTIMISTIC)
-    @Query("select s from Stock s where s.id = :id")
+@Query("select s from Stock s where s.id = :id")
     Stock findByIdWithOptimisticLock(Long id);
 ```
 
 3. 낙관적 락으로 인해 update가 실패한 경우 재시도 로직 작성.
+
 ```java
-    public void decrease(Long id, Long quantity) throws InterruptedException {
+    public void decrease(Long id,Long quantity)throws InterruptedException{
         while(true){
-            try {
-                optimisticLockStockService.decrease(id, quantity);
-                break;
-            } catch (Exception e) { // org.springframework.orm.ObjectOptimisticLockingFailureException 발생!
-                Thread.sleep(50);
-            }
+        try{
+        optimisticLockStockService.decrease(id,quantity);
+        break;
+        }catch(Exception e){ // org.springframework.orm.ObjectOptimisticLockingFailureException 발생!
+        Thread.sleep(50);
         }
-    }
+        }
+        }
 ```
 
 decrease가 실패하게 된다면 ObjectOptimisticLockingFailureException가 발생하여, 잠시 대기 후 다시 decrease 로직을 작동시킵니다.
 해당 코드에서 optimisticLockStockService.decrease를 호출한 클래스는 OptimisticLockStockFacade로 Facade 패턴이 적용된 클래스입니다.
 
-Facade 패턴은 아래와 같은 특징을 가지고 있다고 한다. 해당 코드에서 퍼사드 패턴의 장점으로는 OptimisticLockStockFacade를 실제로 호출하게 될 컨트롤러는 낙관적 락에 대한 신경을 쓰지 않을 것이고, 낙관적 락을 위한 처리 코드를 OptimisticLockStockService에 담지 않아 비즈니스 로직에 영향을 주지 않을 수 있다는 점일 것 같다.
+Facade 패턴은 아래와 같은 특징을 가지고 있다고 한다. 해당 코드에서 퍼사드 패턴의 장점으로는 OptimisticLockStockFacade를 실제로 호출하게 될 컨트롤러는 낙관적 락에 대한 신경을 쓰지 않을
+것이고, 낙관적 락을 위한 처리 코드를 OptimisticLockStockService에 담지 않아 비즈니스 로직에 영향을 주지 않을 수 있다는 점일 것 같다.
 
- 
-> _퍼사드는 클래스 라이브러리 같은 어떤 소프트웨어의 다른 커다란 코드 부분에 대한 간략화된 인터페이스를 제공하는 객체이다.<br/> 
+
+> _퍼사드는 클래스 라이브러리 같은 어떤 소프트웨어의 다른 커다란 코드 부분에 대한 간략화된 인터페이스를 제공하는 객체이다.<br/>
 퍼사드는 소프트웨어 라이브러리를 쉽게 사용할 수 있게 해준다.<br/> 또한 퍼사드는 소프트웨어 라이브러리를 쉽게 이해할 수 있게 해 준다. 퍼사드는 공통적인 작업에 대해 간편한 메소드들을 제공해준다.<br/>
 퍼사드는 라이브러리를 사용하는 코드들을 좀 더 읽기 쉽게 해준다.<br/>
 퍼사드는 라이브러리 바깥쪽의 코드가 라이브러리의 안쪽 코드에 의존하는 일을 감소시켜 준다. 대부분의 바깥쪽의 코드가 퍼사드를 이용하기 때문에 시스템을 개발하는 데 있어 유연성이 향상된다. <br/>
@@ -143,7 +146,37 @@ Facade 패턴은 아래와 같은 특징을 가지고 있다고 한다. 해당 �
 
 낙관적 락은 별도의 lock을 이용하지 않아서 비관적 락보다 성능이 뛰어나지만, update가 실패했을 경우에 재시도 로직을 개발자가 직접 작성해야 한다는 단점이 있다.
 또한 충돌이 빈번하게 발생하는 경우나, 그것이 예상되는 경우는 비관적 락을 이용하는 편이 성능이 더 좋다고 한다.(계속 반복을 하니까)
- 
 
 ## 방법 5 - Named Lock(MySQL) 이용
 
+DB(MySQL)의 lock을 이용하는 3번째 방법은 Named Lock을 이용하는 것이다. Named Lock은 MySql에만 있는 기능으로, Native Query를 이용해서 사용해야 한다.
+Named Lock은 record에 lock을 거는 앞선 두 방법과 달리, 문자열에 대한 lock을 획득하는 것이다. lock은 (key, timeout)으로 이루어져 있으며, 동일한 key로 접근한
+session들은
+해당 lock이 release가 되지 않는다면 lock을 획득할 때까지 대기해야한다. Named Lock은 비관락(배타적 락)과 달리 timeout을 설정할 수 있다는 점에서 이점이 있으며, 분산 락을 구현하기에
+좋다.
+데이터 수정 뿐아니라, 데이터 삽입시에도, 정합성을 위해서 named lock을 이용할 수 있다는 특징도 있다.
+하지만 lock은 transaction이 종료된다고, release가 되지 않기 때문에,
+개발자가 직접 release를 시켜줘야한다. 또한 로직을 작성할 때, lock은 따로 transaction을 차지해서(connection) 따로 lock을 위한 datasource를 만들어서 사용해야 한다는 점이
+있다.
+
+```java
+    -- repository
+    @Query(value = "select get_lock(:key,1000)", nativeQuery = true)
+    void getLock(String key);
+
+    @Query(value = "select release_lock(:key)", nativeQuery = true)
+    void releaseLock(String key);
+    
+    -- facade
+    @Transactional
+    public void decrease(Long id, Long quantity) {
+            try{
+                lockRepository.getLock(id.toString()); // lock 획득
+                stockService.decrease(id, quantity);
+            }finally {
+                lockRepository.releaseLock(id.toString()); // lock release
+        }
+    }
+    
+
+```

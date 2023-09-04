@@ -7,6 +7,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.NoSuchElementException;
+
 @RequiredArgsConstructor
 //@Transactional(readOnly = true)
 @Service
@@ -25,8 +27,7 @@ public class StockService {
         // Stock 조회
         // 재고 감소
         // 갱신된 값 저장
-        Stock stock = stockRepository.findById(id)
-                .orElseThrow();
+        Stock stock = stockRepository.findById(1L).orElseThrow(NoSuchElementException::new);
         stock.decrease(quantity);
         stockRepository.saveAndFlush(stock);
     }

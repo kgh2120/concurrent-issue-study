@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.example.concurrentissue.domain.Stock;
 import com.example.concurrentissue.repository.StockRepository;
+
+import java.util.NoSuchElementException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -55,7 +57,7 @@ class OptimisticLockStockFacadeTest {
         latch.await(); // 다른 쓰레드에서 실행되는 작업이 완료될 떄 까지 기다려주는 클래스.
         //then
 
-        Stock stock = stockRepository.findById(1L).orElseThrow();
+        Stock stock = stockRepository.findById(1L).orElseThrow(NoSuchElementException::new);
         // 100 - 1 (1*100) = 0
 
         assertThat(stock.getQuantity()).isEqualTo(0);
